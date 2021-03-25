@@ -1,0 +1,8 @@
+#!/bin/bash
+
+tmp="$*"
+arg=${tmp// /.}
+find ./ -type f -iname \*.py -exec grep -n --color  -H $arg \{\} \;
+find ./ -type f -iname \*.sh -exec grep -n --color  -H $arg \{\} \;
+find ./ -type f -iname \*.ts -exec grep -n --color  -H $arg \{\} \;
+find ./ -type f -iname \*.sol -exec grep -n --color  -H $arg \{\} \;
