@@ -35,6 +35,7 @@ describe('Oracle', () => {
       oracle = await loadFixture(oracleFixture)
     })
     it('index is 0', async () => {
+      console.log("xxxxxxxxxxxxxxxxxxx:", (await oracle.timestamp()).toString())
       await oracle.initialize({ liquidity: 1, tick: 1, time: 1 })
       expect(await oracle.index()).to.eq(0)
     })
@@ -85,7 +86,7 @@ describe('Oracle', () => {
 
     it('is no op if oracle is already gte that size', async () => {
       await oracle.grow(5)
-      await oracle.grow(3)
+      await oracle.grow(3) //数字必须大于5才有效
       expect(await oracle.index()).to.eq(0)
       expect(await oracle.cardinality()).to.eq(1)
       expect(await oracle.cardinalityNext()).to.eq(5)

@@ -2,21 +2,26 @@
 pragma solidity >=0.5.0;
 
 /// @title Oracle
+/// @title 预言机
 /// @notice Provides price and liquidity data useful for a wide variety of system designs
 /// @dev Instances of stored oracle data, "observations", are collected in the oracle array
 /// Every pool is initialized with an oracle array length of 1. Anyone can pay the SSTOREs to increase the
 /// maximum length of the oracle array. New slots will be added when the array is fully populated.
 /// Observations are overwritten when the full length of the oracle array is populated.
 /// The most recent observation is available, independent of the length of the oracle array, by passing 0 to observe()
+/// 预言机的使用可以看OracleTest.sol
 library Oracle {
+    // 观察点结构体
     struct Observation {
         // the block timestamp of the observation
+        // 观察点所属区块时间戳
         uint32 blockTimestamp;
         // the tick accumulator, i.e. tick * time elapsed since the pool was first initialized
         int56 tickCumulative;
         // the liquidity accumulator, i.e. liquidity * time elapsed since the pool was first initialized
         uint160 liquidityCumulative;
         // whether or not the observation is initialized
+        // 是否已经被初始化,因为数组会提前创建好,当前点是否可用就得加标志判断
         bool initialized;
     }
 
@@ -61,14 +66,19 @@ library Oracle {
     /// If the index is at the end of the allowable array length (according to cardinality), and the next cardinality
     /// is greater than the current one, cardinality may be increased. This restriction is created to preserve ordering.
     /// @param self The stored oracle array
+    /// @param self 预言机数组
     /// @param index The location of the most recently updated observation
     /// @param blockTimestamp The timestamp of the new observation
     /// @param tick The active tick at the time of the new observation
     /// @param liquidity The total in-range liquidity at the time of the new observation
     /// @param cardinality The number of populated elements in the oracle array
+    /// @param cardinality 当前已填充有效观察点的数量,如果已经填满,则循环填
     /// @param cardinalityNext The new length of the oracle array, independent of population
+    /// @param cardinalityNext 可以扩容,最大65535,只能扩,不能缩
     /// @return indexUpdated The new index of the most recently written element in the oracle array
+    /// indexUpdated 最新一个被写入观察点的下标
     /// @return cardinalityUpdated The new cardinality of the oracle array
+    /// cardinalityUpdated 当前一共有多少哥可写入元素
     function write(
         Observation[65535] storage self,
         uint16 index,
@@ -81,9 +91,12 @@ library Oracle {
         Observation memory last = self[index];
 
         // early return if we've already written an observation this block
+        // 如果已经写入过,不覆盖,提前返回
         if (last.blockTimestamp == blockTimestamp) return (index, cardinality);
 
         // if the conditions are right, we can bump the cardinality
+        // 如果已经到了最后一个可以写入点,并且还可以扩容,就扩容
+        // 这里主要是为了保证在扩容之前所有前面的数据都已经是顺序的而不是被循环到中途的
         if (cardinalityNext > cardinality && index == (cardinality - 1)) {
             cardinalityUpdated = cardinalityNext;
         } else {
@@ -96,6 +109,7 @@ library Oracle {
 
     /// @notice Prepares the oracle array to store up to `next` observations
     /// @param self The stored oracle array
+    /// @param self 预言机数组
     /// @param current The current next cardinality of the oracle array
     /// @param next The proposed next cardinality which will be populated in the oracle array
     /// @return next The next cardinality which will be populated in the oracle array
@@ -138,6 +152,7 @@ library Oracle {
     /// @dev The answer must be contained in the array, used when the target is located within the stored observation
     /// boundaries: older than the most recent observation and younger, or the same age as, the oldest observation
     /// @param self The stored oracle array
+    /// @param self 预言机数组
     /// @param time The current block.timestamp
     /// @param target The timestamp at which the reserved observation should be for
     /// @param index The location of the most recently written observation within the oracle array
@@ -181,6 +196,7 @@ library Oracle {
     /// @dev Assumes there is at least 1 initialized observation.
     /// Used by observeSingle() to compute the counterfactual accumulator values as of a given block timestamp.
     /// @param self The stored oracle array
+    /// @param self 预言机数组
     /// @param time The current block.timestamp
     /// @param target The timestamp at which the reserved observation should be for
     /// @param tick The active tick at the time of the returned or simulated observation
@@ -228,6 +244,7 @@ library Oracle {
     /// If called with a timestamp falling between two observations, returns the counterfactual accumulator values
     /// at exactly the timestamp between the two observations.
     /// @param self The stored oracle array
+    /// @param self 预言机数组
     /// @param time The current block timestamp
     /// @param secondsAgo The amount of time to look back, in seconds, at which point to return an observation
     /// @param tick The current tick
@@ -278,6 +295,7 @@ library Oracle {
     /// @notice Returns the accumulator values as of each time seconds ago from the given time in the array of `secondsAgos`
     /// @dev Reverts if `secondsAgos` > oldest observation
     /// @param self The stored oracle array
+    /// @param self 预言机数组
     /// @param time The current block.timestamp
     /// @param secondsAgos Each amount of time to look back, in seconds, at which point to return an observation
     /// @param tick The current tick

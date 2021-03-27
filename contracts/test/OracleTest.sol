@@ -5,6 +5,8 @@ pragma abicoder v2;
 import '../libraries/Oracle.sol';
 
 contract OracleTest {
+    // 这个语法有点强,给这个结构体赋予了Oracle的所有方法
+    // 调用的时候observations.grow(current, next)省去了Oracle.grow(self, current, next);中的self
     using Oracle for Oracle.Observation[65535];
 
     Oracle.Observation[65535] public observations;
@@ -40,6 +42,7 @@ contract OracleTest {
         uint128 liquidity;
     }
 
+    // write an observation, then change tick and liquidity
     // write an observation, then change tick and liquidity
     function update(UpdateParams calldata params) external {
         advanceTime(params.advanceTimeBy);
@@ -81,6 +84,10 @@ contract OracleTest {
 
     function grow(uint16 _cardinalityNext) external {
         cardinalityNext = observations.grow(cardinalityNext, _cardinalityNext);
+    }
+
+    function timestamp() external view returns(uint256){
+        return block.timestamp;
     }
 
     function observe(uint32[] calldata secondsAgos)

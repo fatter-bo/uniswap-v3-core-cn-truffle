@@ -7,6 +7,13 @@ export default {
     hardhat: {
       allowUnlimitedContractSize: false,
     },
+    local: {
+        url: `http://127.0.0.1:7545`,
+    },
+    //ropsten: {
+      //url: `https://eth-ropsten.alchemyapi.io/v2/${ALCHEMY_API_KEY}`,
+      //accounts: [`0x${ROPSTEN_PRIVATE_KEY}`]
+    //},
   },
   solidity: {
     version: '0.7.6',

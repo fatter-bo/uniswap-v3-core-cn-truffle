@@ -37,12 +37,18 @@ describe('BitMath', () => {
 
     it('gas cost of smaller number', async () => {
       await snapshotGasCost(bitMath.getGasCostOfMostSignificantBit(BigNumber.from(3568)))
+      console.log("getGasCostOfMostSignificantBit:",(await bitMath.getGasCostOfMostSignificantBit(BigNumber.from(3568))).toString())
+      console.log("getGasCostOfMostSignificantBit:",(await bitMath.mostSignificantBit(BigNumber.from(5))))
     })
     it('gas cost of max uint128', async () => {
       await snapshotGasCost(bitMath.getGasCostOfMostSignificantBit(BigNumber.from(2).pow(128).sub(1)))
+      console.log("getGasCostOfMostSignificantBit:",(await bitMath.getGasCostOfMostSignificantBit(BigNumber.from(2).pow(128).sub(1))).toString())
+      console.log("getGasCostOfMostSignificantBit:",(await bitMath.mostSignificantBit(BigNumber.from(2).pow(128).sub(1))))
     })
     it('gas cost of max uint256', async () => {
       await snapshotGasCost(bitMath.getGasCostOfMostSignificantBit(BigNumber.from(2).pow(256).sub(1)))
+      console.log("getGasCostOfMostSignificantBit:",(await bitMath.getGasCostOfMostSignificantBit(BigNumber.from(2).pow(256).sub(1))).toString())
+      console.log("getGasCostOfMostSignificantBit:",(await bitMath.mostSignificantBit(BigNumber.from(2).pow(256).sub(1))))
     })
   })
 

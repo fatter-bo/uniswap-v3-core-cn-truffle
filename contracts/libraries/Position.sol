@@ -6,6 +6,8 @@ import './FixedPoint128.sol';
 import './LiquidityMath.sol';
 
 /// @title Position
+/// @title 头寸
+/// @notice Positions represent an owner address' liquidity between a lower and upper tick boundary
 /// @notice Positions represent an owner address' liquidity between a lower and upper tick boundary
 /// @dev Positions store additional state for tracking fees owed to the position
 library Position {
@@ -81,6 +83,7 @@ library Position {
         self.feeGrowthInside1LastX128 = feeGrowthInside1X128;
         if (tokensOwed0 > 0 || tokensOwed1 > 0) {
             // overflow is acceptable, have to withdraw before you hit type(uint128).max fees
+            // 必须要在获益最大数前提取掉,否则有溢出不负责
             self.tokensOwed0 += tokensOwed0;
             self.tokensOwed1 += tokensOwed1;
         }

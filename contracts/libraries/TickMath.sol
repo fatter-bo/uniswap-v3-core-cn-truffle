@@ -6,6 +6,7 @@ pragma solidity >=0.5.0;
 /// prices between 2**-128 and 2**128
 library TickMath {
     /// @dev The minimum tick that may be passed to #getSqrtRatioAtTick computed from log base 1.0001 of 2**-128
+    /// 1.0001**887272 == 2 ** 128,控制这个范围是为了防止计算溢出
     int24 internal constant MIN_TICK = -887272;
     /// @dev The maximum tick that may be passed to #getSqrtRatioAtTick computed from log base 1.0001 of 2**128
     int24 internal constant MAX_TICK = -MIN_TICK;
@@ -67,8 +68,11 @@ library TickMath {
         uint256 msb = 0;
 
         assembly {
+            // 左移7位
             let f := shl(7, gt(r, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
+            // msb|f 或
             msb := or(msb, f)
+            // 右移
             r := shr(f, r)
         }
         assembly {

@@ -18,6 +18,7 @@ describe('Tick', () => {
 
   describe('#tickSpacingToMaxLiquidityPerTick', () => {
     it('returns the correct value for low fee', async () => {
+      console.log("tickSpacingToMaxLiquidityPerTick:xxxxxxxxxxx:",TICK_SPACINGS[FeeAmount.LOW],(await tickTest.tickSpacingToMaxLiquidityPerTick(TICK_SPACINGS[FeeAmount.LOW])).toString());
       const maxLiquidityPerTick = await tickTest.tickSpacingToMaxLiquidityPerTick(TICK_SPACINGS[FeeAmount.LOW])
       expect(maxLiquidityPerTick).to.eq('1917569901783203986719870431555990') // 110.8 bits
       expect(maxLiquidityPerTick).to.eq(getMaxLiquidityPerTick(TICK_SPACINGS[FeeAmount.LOW]))
