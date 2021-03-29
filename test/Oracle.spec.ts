@@ -34,8 +34,9 @@ describe('Oracle', () => {
     beforeEach('deploy test oracle', async () => {
       oracle = await loadFixture(oracleFixture)
     })
+    // 每个it都会重置一次初始化
     it('index is 0', async () => {
-      console.log("xxxxxxxxxxxxxxxxxxx:", (await oracle.timestamp()).toString())
+      console.log("xxxxxxxxxx:", (await oracle.timestamp()).toString(),await oracle.observations(0))
       await oracle.initialize({ liquidity: 1, tick: 1, time: 1 })
       expect(await oracle.index()).to.eq(0)
     })
@@ -49,6 +50,7 @@ describe('Oracle', () => {
     })
     it('sets first slot timestamp only', async () => {
       await oracle.initialize({ liquidity: 1, tick: 1, time: 1 })
+      // oracle.observations map的访问是变成了函数
       checkObservationEquals(await oracle.observations(0), {
         initialized: true,
         blockTimestamp: 1,
@@ -57,6 +59,8 @@ describe('Oracle', () => {
       })
     })
     it('gas', async () => {
+      // 语法学习,await的情况
+      //console.log("xxxxxxxxxx:gas:",(await (await oracle.initialize({ liquidity: 1, tick: 1, time: 1 })).wait()).gasUsed.toNumber());
       await snapshotGasCost(oracle.initialize({ liquidity: 1, tick: 1, time: 1 }))
     })
   })
@@ -116,11 +120,13 @@ describe('Oracle', () => {
     })
 
     it('gas for growing by 1 slot when index == cardinality - 1', async () => {
+      //console.log("xxxxxxxxxx:gas:2:",(await (await oracle.grow(2)).wait()).gasUsed.toNumber());
       await snapshotGasCost(oracle.grow(2))
     })
 
     it('gas for growing by 10 slots when index == cardinality - 1', async () => {
       await snapshotGasCost(oracle.grow(11))
+      console.log("xxxxxxxxxx:gas:11:",(await (await oracle.grow(11)).wait()).gasUsed.toNumber());
     })
 
     it('gas for growing by 1 slot when index != cardinality - 1', async () => {
@@ -141,8 +147,11 @@ describe('Oracle', () => {
       oracle = await loadFixture(initializedOracleFixture)
     })
 
+    // 只有一个观察点的情况,每次覆盖写入
     it('single element array gets overwritten', async () => {
+      //cardinalityNext == cardinality == 1
       await oracle.update({ advanceTimeBy: 1, tick: 2, liquidity: 5 })
+      console.log("xxxxxxxxxx:write:",await oracle.observations(0));
       expect(await oracle.index()).to.eq(0)
       checkObservationEquals(await oracle.observations(0), {
         initialized: true,
@@ -151,7 +160,10 @@ describe('Oracle', () => {
         blockTimestamp: 1,
       })
       await oracle.update({ advanceTimeBy: 5, tick: -1, liquidity: 8 })
+      console.log("xxxxxxxxxx:write:",await oracle.observations(0));
       expect(await oracle.index()).to.eq(0)
+      // tickCumulative = last.tickCumulative + last.tick * advanceTimeBy = 0 + 2 * 5
+      // liquidityCumulative = last.liquidityCumulative + last.liquidity * advanceTimeBy = 0 + 5 * 5
       checkObservationEquals(await oracle.observations(0), {
         initialized: true,
         liquidityCumulative: 25,
@@ -160,6 +172,8 @@ describe('Oracle', () => {
       })
       await oracle.update({ advanceTimeBy: 3, tick: 2, liquidity: 3 })
       expect(await oracle.index()).to.eq(0)
+      // tickCumulative = last.tickCumulative + last.tick * advanceTimeBy = 10 + -1 * 3
+      // liquidityCumulative = last.liquidityCumulative + last.liquidity * advanceTimeBy = 25 + 8 * 3
       checkObservationEquals(await oracle.observations(0), {
         initialized: true,
         liquidityCumulative: 49,
@@ -168,6 +182,7 @@ describe('Oracle', () => {
       })
     })
 
+    //如果时间没有变化,什么都不做
     it('does nothing if time has not changed', async () => {
       await oracle.grow(2)
       await oracle.update({ advanceTimeBy: 1, tick: 3, liquidity: 2 })
@@ -176,6 +191,7 @@ describe('Oracle', () => {
       expect(await oracle.index()).to.eq(1)
     })
 
+    //时间变化,index%3循环递增
     it('writes an index if time has changed', async () => {
       await oracle.grow(3)
       await oracle.update({ advanceTimeBy: 6, tick: 3, liquidity: 2 })
@@ -191,11 +207,15 @@ describe('Oracle', () => {
       })
     })
 
+    // 在扩容时不会主动变更cardinality,要等到下一次写入数据时
     it('grows cardinality when writing past', async () => {
       await oracle.grow(2)
+      //这里是增加到4, 不是新增4
       await oracle.grow(4)
       expect(await oracle.cardinality()).to.eq(1)
+      //这之前都没有变化
       await oracle.update({ advanceTimeBy: 3, tick: 5, liquidity: 6 })
+      //这里就已经变化了之前都没有变化
       expect(await oracle.cardinality()).to.eq(4)
       await oracle.update({ advanceTimeBy: 4, tick: 6, liquidity: 4 })
       expect(await oracle.cardinality()).to.eq(4)
@@ -208,11 +228,16 @@ describe('Oracle', () => {
       })
     })
 
+    //循环写入
     it('wraps around', async () => {
       await oracle.grow(3)
+      //index=0%3=0
       await oracle.update({ advanceTimeBy: 3, tick: 1, liquidity: 2 })
+      //index=1%3=1
       await oracle.update({ advanceTimeBy: 4, tick: 2, liquidity: 3 })
+      //index=2%3=2
       await oracle.update({ advanceTimeBy: 5, tick: 3, liquidity: 4 })
+      //index=3%3=0
 
       expect(await oracle.index()).to.eq(0)
 
@@ -224,6 +249,7 @@ describe('Oracle', () => {
       })
     })
 
+    //流动性计算
     it('accumulates liquidity', async () => {
       await oracle.grow(4)
 
@@ -233,6 +259,8 @@ describe('Oracle', () => {
 
       expect(await oracle.index()).to.eq(3)
 
+      //console.log("xxxxxxxxxx:accumulates:",await oracle.observations(0));
+      //因为初始化的时候写入了oracle.observations(0),所以实际写入是从1开始的
       checkObservationEquals(await oracle.observations(1), {
         initialized: true,
         tickCumulative: 0,
@@ -260,7 +288,9 @@ describe('Oracle', () => {
     })
   })
 
+  //观察点操作
   describe('#observe', () => {
+    //预处理
     describe('before initialization', async () => {
       let oracle: OracleTest
       beforeEach('deploy test oracle', async () => {
@@ -275,10 +305,12 @@ describe('Oracle', () => {
         return { liquidityCumulative, tickCumulative }
       }
 
+      //检查不初始化时的报错
       it('fails before initialize', async () => {
         await expect(observeSingle(0)).to.be.revertedWith('I')
       })
 
+      //如果不是不在有效区间则报错
       it('fails if an older observation does not exist', async () => {
         await oracle.initialize({ liquidity: 4, tick: 2, time: 5 })
         await expect(observeSingle(1)).to.be.revertedWith('OLD')
@@ -287,6 +319,7 @@ describe('Oracle', () => {
       it('does not fail across overflow boundary', async () => {
         await oracle.initialize({ liquidity: 4, tick: 2, time: 2 ** 32 - 1 })
         await oracle.advanceTime(2)
+        console.log("xxxxxxxxxx:observe:", (await oracle.time()).toString());
         const { tickCumulative, liquidityCumulative } = await observeSingle(1)
         expect(tickCumulative).to.be.eq(2)
         expect(liquidityCumulative).to.be.eq(4)
@@ -313,6 +346,7 @@ describe('Oracle', () => {
         expect(liquidityCumulative).to.eq(0)
       })
 
+      //上一秒的观察点数据,5+3-1
       it('single observation in past counterfactual in past', async () => {
         await oracle.initialize({ liquidity: 4, tick: 2, time: 5 })
         await oracle.advanceTime(3)
@@ -321,6 +355,7 @@ describe('Oracle', () => {
         expect(liquidityCumulative).to.eq(8)
       })
 
+      //当前的观察点数据,5+3-0
       it('single observation in past counterfactual now', async () => {
         await oracle.initialize({ liquidity: 4, tick: 2, time: 5 })
         await oracle.advanceTime(3)

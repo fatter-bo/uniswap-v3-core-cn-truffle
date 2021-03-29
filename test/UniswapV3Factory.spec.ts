@@ -52,6 +52,8 @@ describe('UniswapV3Factory', () => {
   })
 
   it('initial enabled fee amounts', async () => {
+      console.log("xxxxxxxx:",await factory.feeAmountTickSpacing(FeeAmount.LOW))
+      console.log("xxxxxxxx:",await factory.testMap(FeeAmount.LOW))
     expect(await factory.feeAmountTickSpacing(FeeAmount.LOW)).to.eq(TICK_SPACINGS[FeeAmount.LOW])
     expect(await factory.feeAmountTickSpacing(FeeAmount.MEDIUM)).to.eq(TICK_SPACINGS[FeeAmount.MEDIUM])
     expect(await factory.feeAmountTickSpacing(FeeAmount.HIGH)).to.eq(TICK_SPACINGS[FeeAmount.HIGH])

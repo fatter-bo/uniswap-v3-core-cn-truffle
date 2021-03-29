@@ -31,6 +31,7 @@ contract UniswapV3PoolDeployer is IUniswapV3PoolDeployer {
         uint24 fee,
         int24 tickSpacing
     ) internal returns (address pool) {
+        //这个变量临时保存,用完马上销毁,但是没找到在哪里调用,有点奇怪
         parameters = Parameters({factory: factory, token0: token0, token1: token1, fee: fee, tickSpacing: tickSpacing});
         //这里直接新创建了一个合约
         pool = address(new UniswapV3Pool{salt: keccak256(abi.encode(token0, token1, fee))}());

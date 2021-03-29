@@ -105,6 +105,8 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// @dev Mutually exclusive reentrancy protection into the pool to/from a method. This method also prevents entrance
     /// to a function before the pool is initialized. The reentrancy guard is required throughout the contract because
     /// we use balance checks to determine the payment status of interactions such as mint, swap and flash.
+    // 这里的锁主要是防止重入锁,并不是我们通常遇到的竞争锁,函数可能在调用外部合约时外部合约又再次调用回来
+    // 我的理解是这个锁可以防止闪电贷一类的问题
     modifier lock() {
         require(slot0.unlocked, 'LOK');
         slot0.unlocked = false;
@@ -113,6 +115,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     }
 
     /// @dev Prevents calling a function from anyone except the address returned by IUniswapV3Factory#owner()
+    // 因为msg.sender 是不会传递的,所以这样可以控制是创建者
     modifier onlyFactoryOwner() {
         require(msg.sender == IUniswapV3Factory(factory).owner());
         _;
@@ -127,6 +130,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     }
 
     /// @dev Common checks for valid tick inputs.
+    // 检查tick的有效范围
     function checkTicks(int24 tickLower, int24 tickUpper) private pure {
         require(tickLower < tickUpper, 'TLU');
         require(tickLower >= TickMath.MIN_TICK, 'TLM');
@@ -134,6 +138,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     }
 
     /// @dev Returns the block timestamp truncated to 32 bits, i.e. mod 2**32. This method is overridden in tests.
+    // 控制时间戳是个32位以内的数,block.timestamp本身是个uint64
     function _blockTimestamp() internal view virtual returns (uint32) {
         return uint32(block.timestamp); // truncation is desired
     }
@@ -141,6 +146,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// @dev Get the pool's balance of token0
     /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
     /// check
+    // 节省gas的余额获取方式
     function balance0() private view returns (uint256) {
         (bool success, bytes memory data) =
             token0.staticcall(abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this)));
@@ -151,6 +157,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// @dev Get the pool's balance of token1
     /// @dev This function is gas optimized to avoid a redundant extcodesize check in addition to the returndatasize
     /// check
+    // 节省gas的余额获取方式
     function balance1() private view returns (uint256) {
         (bool success, bytes memory data) =
             token1.staticcall(abi.encodeWithSelector(IERC20Minimal.balanceOf.selector, address(this)));
@@ -201,6 +208,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
 
     /// @inheritdoc IUniswapV3PoolActions
     /// @dev not locked because it initializes unlocked
+    // 因为锁的默认值是unlocked,所以不用加锁
     function initialize(uint160 sqrtPriceX96) external override {
         require(slot0.sqrtPriceX96 == 0, 'AI');
 
@@ -409,6 +417,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     }
 
     /// @inheritdoc IUniswapV3PoolActions
+    // 转账付款
     function collect(
         address recipient,
         int24 tickLower,
@@ -466,10 +475,13 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
 
     struct SwapCache {
         // the protocol fee for the input token
+        // 协议费
         uint8 feeProtocol;
         // liquidity at the beginning of the swap
+        // 初始流动性
         uint128 liquidityStart;
         // the timestamp of the current block
+        // 当前区块时间
         uint32 blockTimestamp;
     }
 
@@ -528,6 +540,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             'SPL'
         );
 
+        //这样加锁感觉有点山寨
         slot0.unlocked = false;
 
         SwapCache memory cache =

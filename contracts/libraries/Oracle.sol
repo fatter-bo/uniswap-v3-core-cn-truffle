@@ -42,6 +42,7 @@ library Oracle {
         return
             Observation({
                 blockTimestamp: blockTimestamp,
+                // TWAP 时间加权平均发的关键算法
                 tickCumulative: last.tickCumulative + int56(tick) * delta,
                 liquidityCumulative: last.liquidityCumulative + uint160(liquidity) * delta,
                 initialized: true
