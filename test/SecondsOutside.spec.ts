@@ -21,6 +21,7 @@ describe('SecondsOutside', () => {
 
   describe('#initialize', () => {
     it('reverts if tick is not multiple of tickSpacing', async () => {
+        //1%4 != 0
       await expect(secondsOutside.initialize(1, 8, 4, TEST_POOL_START_TIME)).to.be.reverted
     })
     it('tick 0 at current tick', async () => {
@@ -48,12 +49,16 @@ describe('SecondsOutside', () => {
       expect(await secondsOutside.get(tick, tickSpacing)).to.eq(TEST_POOL_START_TIME)
     })
     it('tick 21 at current tick', async () => {
-      const tick = 21
+      let tick = 21
       const tickCurrent = 21
       const tickSpacing = 3
       await secondsOutside.initialize(tick, tickCurrent, tickSpacing, TEST_POOL_START_TIME)
+      console.log("xxxxxxxxxxx:",(await secondsOutside.secondsOutside(0)),BigNumber.from(TEST_POOL_START_TIME).shl(224))
       expect(await secondsOutside.secondsOutside(0)).to.eq(BigNumber.from(TEST_POOL_START_TIME).shl(224))
       expect(await secondsOutside.get(tick, tickSpacing)).to.eq(TEST_POOL_START_TIME)
+      tick = 18
+      await secondsOutside.initialize(tick, tickCurrent, tickSpacing, TEST_POOL_START_TIME)
+      console.log("xxxxxxxxxxx:",(await secondsOutside.secondsOutside(0)),BigNumber.from(TEST_POOL_START_TIME).shl(224))
     })
     it('tick 21 above current tick', async () => {
       const tick = 21
@@ -127,6 +132,7 @@ describe('SecondsOutside', () => {
 
     it('combined two ticks in same word where only lower is set', async () => {
       await secondsOutside.initialize(1, 1, 1, TEST_POOL_START_TIME)
+        // 下面这行 2 > 1
       await secondsOutside.initialize(2, 1, 1, TEST_POOL_START_TIME + 1)
       expect(await secondsOutside.get(1, 1)).to.eq(TEST_POOL_START_TIME)
       expect(await secondsOutside.get(2, 1)).to.eq(0)
@@ -160,7 +166,11 @@ describe('SecondsOutside', () => {
   describe('#cross', () => {
     it('flips the tick', async () => {
       await secondsOutside.initialize(1, 1, 1, TEST_POOL_START_TIME)
+      //console.log("xxxxxxxxxxx:",(await secondsOutside.get(1, 1)))
       await secondsOutside.cross(1, 1, TEST_POOL_START_TIME + 2)
+      //console.log("xxxxxxxxxxx:",(await secondsOutside.get(1, 1)))
+      await secondsOutside.cross(1, 1, TEST_POOL_START_TIME + 2)
+      console.log("xxxxxxxxxxx:",(await secondsOutside.get(1, 1)))
       expect(await secondsOutside.get(1, 1)).to.eq(2)
     })
 
@@ -176,6 +186,7 @@ describe('SecondsOutside', () => {
     describe('starts inside range', () => {
       it('is correct if tick is inside range', async () => {
         await secondsOutside.initialize(1, 2, 1, TEST_POOL_START_TIME)
+          //因为4>2所以没有更新
         await secondsOutside.initialize(4, 2, 1, TEST_POOL_START_TIME)
         expect(await secondsOutside.secondsInside(1, 4, 3, 1, TEST_POOL_START_TIME + 15)).to.eq(15)
       })
@@ -196,8 +207,11 @@ describe('SecondsOutside', () => {
     describe('starts below range', () => {
       it('is correct if tick is inside range', async () => {
         await secondsOutside.initialize(1, 0, 1, TEST_POOL_START_TIME)
+      console.log("xxxxxxxxxxx:starts:",(await secondsOutside.get(1, 1)))
         await secondsOutside.initialize(4, 0, 1, TEST_POOL_START_TIME)
+      console.log("xxxxxxxxxxx:starts:",(await secondsOutside.get(1, 1)))
         await secondsOutside.cross(1, 1, TEST_POOL_START_TIME + 5)
+      console.log("xxxxxxxxxxx:starts:",(await secondsOutside.get(1, 1)))
         expect(await secondsOutside.secondsInside(1, 4, 2, 1, TEST_POOL_START_TIME + 15)).to.eq(10)
       })
       it('is correct if tick is above range', async () => {

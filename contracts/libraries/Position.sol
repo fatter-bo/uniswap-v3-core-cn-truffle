@@ -10,12 +10,15 @@ import './LiquidityMath.sol';
 /// @notice Positions represent an owner address' liquidity between a lower and upper tick boundary
 /// @notice Positions represent an owner address' liquidity between a lower and upper tick boundary
 /// @dev Positions store additional state for tracking fees owed to the position
+/// 保存还未结算的手续费
 library Position {
     // info stored for each user's position
     struct Info {
         // the amount of liquidity owned by this position
+        // 这个区间内赚取的流动性总量
         uint128 liquidity;
         // fee growth per unit of liquidity as of the last update to liquidity or fees owed
+        // 这里保存在这个区间内赚取的总量
         uint256 feeGrowthInside0LastX128;
         uint256 feeGrowthInside1LastX128;
         // the fees owed to the position owner in token0/token1
@@ -51,8 +54,9 @@ library Position {
     ) internal {
         Info memory _self = self;
 
-        uint128 liquidityNext;
+        uint128 liquidityNext; //变化后的流动性
         if (liquidityDelta == 0) {
+            //不允许变化量和当前值同时为0
             require(_self.liquidity > 0, 'NP'); // disallow pokes for 0 liquidity positions
             liquidityNext = _self.liquidity;
         } else {
@@ -64,7 +68,7 @@ library Position {
             uint128(
                 FullMath.mulDiv(
                     feeGrowthInside0X128 - _self.feeGrowthInside0LastX128,
-                    _self.liquidity,
+                    _self.liquidity,//用变化前的流动性做计算
                     FixedPoint128.Q128
                 )
             );
@@ -78,6 +82,7 @@ library Position {
             );
 
         // update the position
+        // 更新流动性
         if (liquidityDelta != 0) self.liquidity = liquidityNext;
         self.feeGrowthInside0LastX128 = feeGrowthInside0X128;
         self.feeGrowthInside1LastX128 = feeGrowthInside1X128;

@@ -9,6 +9,7 @@ import './NoDelegateCall.sol';
 import './UniswapV3Pool.sol';
 
 /// @title Canonical Uniswap V3 factory
+/// 用来部署和管理UniswapV3Pool,包括管理员和费率,步长
 /// @notice Deploys Uniswap V3 pools and manages ownership and control over pool protocol fees
 contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegateCall {
     /// @inheritdoc IUniswapV3Factory
@@ -30,6 +31,7 @@ contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegat
         emit OwnerChanged(address(0), msg.sender);
 
         //这里收费按照百万分比例算,后面这个数字是 tickSpacing,但是还不理解为何不同费率的值不一样
+        //tickSpacing相当于步长,这里不知道用哪个中文词翻译了
         feeAmountTickSpacing[500] = 10;
         emit FeeAmountEnabled(500, 10);
         feeAmountTickSpacing[3000] = 60;
@@ -66,6 +68,7 @@ contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegat
     }
 
     /// @inheritdoc IUniswapV3Factory
+    // 如果想自定义手续费,可以先添加费率对应步长,然后就可以createPool了
     function enableFeeAmount(uint24 fee, int24 tickSpacing) public override {
         require(msg.sender == owner);
         require(fee < 1000000);//手续费是按百万分比算的
@@ -74,7 +77,7 @@ contract UniswapV3Factory is IUniswapV3Factory, UniswapV3PoolDeployer, NoDelegat
         // TickBitmap#nextInitializedTickWithinOneWord overflows int24 container from a valid tick
         // 16384 ticks represents a >5x price change with ticks of 1 bips
         require(tickSpacing > 0 && tickSpacing < 16384);
-        //这里的意思是确定以前没有添加过,也就是说一点被添加,就不能修改
+        //这里的意思是确定以前没有添加过,也就是说一旦被添加,就不能修改
         require(feeAmountTickSpacing[fee] == 0);
 
         feeAmountTickSpacing[fee] = tickSpacing;

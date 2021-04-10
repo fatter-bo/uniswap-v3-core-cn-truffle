@@ -24,7 +24,8 @@ library TickBitmap {
         mapping(int16 => uint256) storage self,
         int24 tick,
         int24 tickSpacing
-    ) internal {
+    ) internal{
+        //确保是可以整除的
         require(tick % tickSpacing == 0); // ensure that the tick is spaced
         (int16 wordPos, uint8 bitPos) = position(tick / tickSpacing);
         uint256 mask = 1 << bitPos;
@@ -34,6 +35,7 @@ library TickBitmap {
     /// @notice Returns the next initialized tick contained in the same word (or adjacent word) as the tick that is either
     /// to the left (less than or equal to) or right (greater than) of the given tick
     /// @param self The mapping in which to compute the next initialized tick
+    /// 用来监控下一个被初始化的tick
     /// @param tick The starting tick
     /// @param tickSpacing The spacing between usable ticks
     /// @param lte Whether to search for the next initialized tick to the left (less than or equal to the starting tick)

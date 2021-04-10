@@ -46,6 +46,7 @@ library BitMath {
     }
 
     /// @notice Returns the index of the least significant bit of the number,
+    // 计算一个数的二进制最小位不为0的下标
     ///     where the least significant bit is at index 0 and the most significant bit is at index 255
     /// @dev The function satisfies the property:
     ///     (x & 2**leastSignificantBit(x)) != 0 and (x & (2**(leastSignificantBit(x)) - 1)) == 0)

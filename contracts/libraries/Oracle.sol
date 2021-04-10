@@ -19,6 +19,7 @@ library Oracle {
         // the tick accumulator, i.e. tick * time elapsed since the pool was first initialized
         int56 tickCumulative;
         // the liquidity accumulator, i.e. liquidity * time elapsed since the pool was first initialized
+        // 流动性的统计计算,可以让外部合约用来分析判断哪个池子的TWAP更可靠
         uint160 liquidityCumulative;
         // whether or not the observation is initialized
         // 是否已经被初始化,因为数组会提前创建好,当前点是否可用就得加标志判断
@@ -50,10 +51,15 @@ library Oracle {
     }
 
     /// @notice Initialize the oracle array by writing the first slot. Called once for the lifecycle of the observations array
+    // 初始化预言机,并且填入第一个数据
     /// @param self The stored oracle array
+    // 预言机数据数组
     /// @param time The time of the oracle initialization, via block.timestamp truncated to uint32
+    // 时间戳，实际使用时用的是block.timestamp,因timestamp定义位256位,所以需要转换下
     /// @return cardinality The number of populated elements in the oracle array
+    /// 当前数据循环写入的基础,其实就是当前有效使用的最大数组量
     /// @return cardinalityNext The new length of the oracle array, independent of population
+    /// 如果需要扩容时，不能直接扩容，要等到下一个循环写到cardinality处后才可以扩容,否则使用时计算会有问题,会导致数据不连续
     function initialize(Observation[65535] storage self, uint32 time)
         internal
         returns (uint16 cardinality, uint16 cardinalityNext)

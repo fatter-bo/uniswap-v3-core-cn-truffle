@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.0;
 
-/// @title 512位的大数处理
+/// @title 512位的大数处理 a*b/c，过程中a*b可能会溢出所以需要处理
 /// @notice 256位的输入，在中间计算出现了大于256位的数,但是返回值又回到256位以内,为了避免中间过程的溢出精度损失,来个512的大数处理
 /// @dev 防止有人恶意用中间过程溢出损失精度的方式作弊
 library FullMath {
@@ -111,12 +111,13 @@ library FullMath {
         return result;
     }
 
+    // 精度计算有个基础理念是对我有利，避免被薅羊毛，因为四舍五入不能确定对谁有利，存在风险,基本不在合约中使用
     /// @notice Calculates ceil(a×b÷denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
     /// @notice 向上取整,如果溢出或者除数为0抛异常
-    /// @param a The multiplicand
-    /// @param b The multiplier
-    /// @param denominator The divisor
-    /// @return result The 256-bit result
+    /// @param a 被成数
+    /// @param b 成数
+    /// @param denominator 除数
+    /// @return result 返回256位的数
     function mulDivRoundingUp(
         uint256 a,
         uint256 b,

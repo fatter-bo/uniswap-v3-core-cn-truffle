@@ -15,6 +15,7 @@ library SecondsOutside {
     /// @return shift the position of the least significant bit in the 32 bit seconds outside
     function position(int24 tick, int24 tickSpacing) private pure returns (int24 wordPos, uint8 shift) {
         require(tick % tickSpacing == 0);
+        //21,3
 
         int24 compressed = tick / tickSpacing;
 
@@ -71,6 +72,7 @@ library SecondsOutside {
         uint256 prev = self[wordPos];
         uint32 timePrev = uint32(prev >> shift);
         uint32 timeNext = time - timePrev;
+        //就是为了给self[wordPos]的这个位置重新复制
         self[wordPos] = (prev ^ (uint256(timePrev) << shift)) | (uint256(timeNext) << shift);
     }
 

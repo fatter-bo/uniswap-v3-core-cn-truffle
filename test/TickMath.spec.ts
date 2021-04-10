@@ -17,7 +17,25 @@ describe('TickMath', () => {
   before('deploy TickMathTest', async () => {
     const factory = await ethers.getContractFactory('TickMathTest')
     tickMath = (await factory.deploy()) as TickMathTest
+    let receipt = await tickMath.deployTransaction.wait()
+    console.log("xxxxxxxxxxxxx:",receipt.gasUsed.toNumber())
+    receipt = await (await tickMath.add()).wait()
+    console.log("xxxxxxxxxxxxx:",receipt.gasUsed.toNumber())
+    console.log("xxxxxxxxxxxxx:get:",(await tickMath.get()).toNumber())
+    receipt = await (await tickMath.del()).wait()
+    console.log("xxxxxxxxxxxxx:del:",receipt.gasUsed.toNumber())
+    console.log("xxxxxxxxxxxxx:del:",receipt)
+    receipt = await (await tickMath.destroy()).wait()
+    console.log("xxxxxxxxxxxxx:",receipt.gasUsed.toNumber())
   })
+  describe('#MIN_SQRT_RATIO', async () => {
+    it('equals #getSqrtRatioAtTick(MIN_TICK)', async () => {
+      const min = await tickMath.getSqrtRatioAtTick(MIN_TICK)
+      expect(min).to.eq(await tickMath.MIN_SQRT_RATIO())
+      expect(min).to.eq(MIN_SQRT_RATIO)
+    })
+  })
+    //const receipt = await resolved.deployTransaction.wait()
 
   describe('#getSqrtRatioAtTick', () => {
     it('throws for too low', async () => {
@@ -163,4 +181,5 @@ describe('TickMath', () => {
       })
     }
   })
+    // */
 })

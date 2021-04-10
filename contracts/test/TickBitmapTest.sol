@@ -17,6 +17,14 @@ contract TickBitmapTest {
         bitmap.flipTick(tick, 1);
         return gasBefore - gasleft();
     }
+    function position1(int24 tick) public pure returns (int16 wordPos, uint8 bitPos) {
+        wordPos = int16(tick >> 8);
+        bitPos = uint8(tick % 256);
+    }
+    function GetMap(int16 key)public view returns(uint256) {
+        return bitmap[key];
+        
+    }
 
     function nextInitializedTickWithinOneWord(int24 tick, bool lte)
         external

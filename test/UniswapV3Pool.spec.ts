@@ -112,10 +112,12 @@ describe('UniswapV3Pool', () => {
   describe('#initialize', () => {
     it('fails if already initialized', async () => {
       await pool.initialize(encodePriceSqrt(1, 1))
+        // 不能重复初始化
       await expect(pool.initialize(encodePriceSqrt(1, 1))).to.be.reverted
     })
+      // 价格范围必须是: MIN_SQRT_RATIO <= price < MAX_SQRT_RATIO
     it('fails if starting price is too low', async () => {
-      await expect(pool.initialize(1)).to.be.revertedWith('R')
+      await expect(pool.initialize(1)).to.be.revertedWith('R') //TickMath.getTickAtSqrtRatio
       await expect(pool.initialize(MIN_SQRT_RATIO.sub(1))).to.be.revertedWith('R')
     })
     it('fails if starting price is too high', async () => {
@@ -131,9 +133,11 @@ describe('UniswapV3Pool', () => {
       expect((await pool.slot0()).tick).to.eq(getMaxTick(1) - 1)
     })
     it('sets initial variables', async () => {
-      const price = encodePriceSqrt(1, 2)
+      const price = encodePriceSqrt(1, 2) // Math.sqrt(1/2)*2***96
+        console.log("xxxxxxxxxxx:",price.toString())
       await pool.initialize(price)
 
+        console.log("xxxxxxxxxxx:",await pool.slot0())
       const { sqrtPriceX96, observationIndex } = await pool.slot0()
       expect(sqrtPriceX96).to.eq(price)
       expect(observationIndex).to.eq(0)

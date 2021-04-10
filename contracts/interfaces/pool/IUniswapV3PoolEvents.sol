@@ -2,22 +2,28 @@
 pragma solidity >=0.5.0;
 
 /// @title Events emitted by a pool
+/// 流动池的所有事件接口
 /// @notice Contains all events emitted by the pool
 interface IUniswapV3PoolEvents {
     /// @notice Emitted exactly once by a pool when #initialize is first called on the pool
+    /// 初始化流动池的事件
     /// @dev Mint/Burn/Swap cannot be emitted by the pool before Initialize
     /// @param sqrtPriceX96 The initial sqrt price of the pool, as a Q64.96
     /// @param tick The initial tick of the pool, i.e. log base 1.0001 of the starting price of the pool
     event Initialize(uint160 sqrtPriceX96, int24 tick);
 
     /// @notice Emitted when liquidity is minted for a given position
+    /// 在指定头寸上添加流动性
     /// @param sender The address that minted the liquidity
     /// @param owner The owner of the position and recipient of any minted liquidity
     /// @param tickLower The lower tick of the position
     /// @param tickUpper The upper tick of the position
     /// @param amount The amount of liquidity minted to the position range
+    /// 流动性的增加量
     /// @param amount0 How much token0 was required for the minted liquidity
+    /// 需要的token0数量
     /// @param amount1 How much token1 was required for the minted liquidity
+    /// 需要的token1数量
     event Mint(
         address sender,
         address indexed owner,
@@ -29,7 +35,9 @@ interface IUniswapV3PoolEvents {
     );
 
     /// @notice Emitted when fees are collected by the owner of a position
+    /// 提取手续费事件
     /// @dev Collect events may be emitted with zero amount0 and amount1 when the caller chooses not to collect fees
+    /// 如果这个范围没有可提取手续费,两个币的数量是0
     /// @param owner The owner of the position for which fees are collected
     /// @param tickLower The lower tick of the position
     /// @param tickUpper The upper tick of the position
@@ -45,7 +53,9 @@ interface IUniswapV3PoolEvents {
     );
 
     /// @notice Emitted when a position's liquidity is removed
+    /// 赎回流动性
     /// @dev Does not withdraw any fees earned by the liquidity position, which must be withdrawn via #collect
+    /// 只赎回流动性,不会赎回收益,跟v2概念不一样
     /// @param owner The owner of the position for which liquidity is removed
     /// @param tickLower The lower tick of the position
     /// @param tickUpper The upper tick of the position
@@ -62,6 +72,7 @@ interface IUniswapV3PoolEvents {
     );
 
     /// @notice Emitted by the pool for any swaps between token0 and token1
+    /// 买卖token
     /// @param sender The address that initiated the swap call, and that received the callback
     /// @param recipient The address that received the output of the swap
     /// @param amount0 The delta of the token0 balance of the pool

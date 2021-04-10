@@ -2,11 +2,14 @@
 pragma solidity >=0.5.0;
 
 /// @title Pool state that can change
+/// 流动池的状态查询
 /// @notice These methods compose the pool's state, and can change with any frequency including multiple times
 /// per transaction
+/// 这些状态在每个交易里都有可能被多次改变
 interface IUniswapV3PoolState {
     /// @notice The 0th storage slot in the pool stores many values, and is exposed as a single method to save gas
     /// when accessed externally.
+    /// 最新数据被单独变量记出来,因为使用频繁,这样可以减少gas费
     /// @return sqrtPriceX96 The current price of the pool as a sqrt(token1/token0) Q64.96 value
     /// tick The current tick of the pool, i.e. according to the last tick transition that was run.
     /// This value may not always be equal to SqrtTickMath.getTickAtSqrtRatio(sqrtPriceX96) if the price is on a tick

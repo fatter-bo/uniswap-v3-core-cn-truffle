@@ -41,35 +41,48 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     using Oracle for Oracle.Observation[65535];
 
     /// @inheritdoc IUniswapV3PoolImmutables
+    // 所属工厂合约
     address public immutable override factory;
     /// @inheritdoc IUniswapV3PoolImmutables
+    // 代币0
     address public immutable override token0;
     /// @inheritdoc IUniswapV3PoolImmutables
+    // 代币1
     address public immutable override token1;
     /// @inheritdoc IUniswapV3PoolImmutables
+    // 费率 this=factory.getPool[token0][token1][fee]
     uint24 public immutable override fee;
 
     /// @inheritdoc IUniswapV3PoolImmutables
+    // 步长
     int24 public immutable override tickSpacing;
 
     /// @inheritdoc IUniswapV3PoolImmutables
     uint128 public immutable override maxLiquidityPerTick;
 
+    //初始状态需要记录下来
     struct Slot0 {
         // the current price
+        // =sqrt(token1/token0) Q64.96
         uint160 sqrtPriceX96;
         // the current tick
         int24 tick;
         // the most-recently updated index of the observations array
+        // 最新被更新到observations里的下标
         uint16 observationIndex;
         // the current maximum number of observations that are being stored
+        // 当前观察点的循环写入基数observationIndex=observationIndex%observationCardinality
         uint16 observationCardinality;
         // the next maximum number of observations to store, triggered in observations.write
+        // 最大课写入观察点,扩容
         uint16 observationCardinalityNext;
         // the current protocol fee as a percentage of the swap fee taken on withdrawal
         // represented as an integer denominator (1/x)%
+        // 官方收取流动性的协议费,=fee*feeProtocol/100,费率范围(1/4~1/10)
+        // 这里用高4位存了fee1Proto低4位存了fee0Proto,也就是说两边的费率可以不一样,为了节省存储写在了一个uint8里
         uint8 feeProtocol;
         // whether the pool is locked
+        // 价格重入锁的标志,避免被外部合约又调回来
         bool unlocked;
     }
     /// @inheritdoc IUniswapV3PoolState
@@ -210,10 +223,12 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// @dev not locked because it initializes unlocked
     // 因为锁的默认值是unlocked,所以不用加锁
     function initialize(uint160 sqrtPriceX96) external override {
+        // 不能重复初始化,0表示未初始化过
         require(slot0.sqrtPriceX96 == 0, 'AI');
 
         int24 tick = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
 
+        // 初始化的时候两个都返回1
         (uint16 cardinality, uint16 cardinalityNext) = observations.initialize(_blockTimestamp());
 
         slot0 = Slot0({
@@ -253,8 +268,10 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             int256 amount1
         )
     {
+        // 先检查有效性,不满足就报错
         checkTicks(params.tickLower, params.tickUpper);
 
+        //节省gas
         Slot0 memory _slot0 = slot0; // SLOAD for gas optimization
 
         position = _updatePosition(
@@ -268,6 +285,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         if (params.liquidityDelta != 0) {
             if (_slot0.tick < params.tickLower) {
                 // current tick is below the passed range; liquidity can only become in range by crossing from left to
+                // 当前滑槽右移了,相当于t1涨价了,需要更多的t0
                 // right, when we'll need _more_ token0 (it's becoming more valuable) so user must provide it
                 amount0 = SqrtPriceMath.getAmount0Delta(
                     TickMath.getSqrtRatioAtTick(params.tickLower),
@@ -523,7 +541,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     /// @inheritdoc IUniswapV3PoolActions
     function swap(
         address recipient,
-        bool zeroForOne,
+        bool zeroForOne,//购买方向,true:从token0到token1,false相反,吃单方向
         int256 amountSpecified,
         uint160 sqrtPriceLimitX96,
         bytes calldata data
@@ -533,6 +551,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         Slot0 memory slot0Start = slot0;
 
         require(slot0Start.unlocked, 'LOK');
+        // 确保限定的吃单方向是有效的并且不能超过边界
         require(
             zeroForOne
                 ? sqrtPriceLimitX96 < slot0Start.sqrtPriceX96 && sqrtPriceLimitX96 > TickMath.MIN_SQRT_RATIO
@@ -564,6 +583,8 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             });
 
         // continue swapping as long as we haven't used the entire input/output and haven't reached the price limit
+        // 从当前价购买到指定价格,如果还没交易完,剩余部分就不成交了
+        // 成交过程只能逐个tick的循环成交,不能跨tick
         while (state.amountSpecifiedRemaining != 0 && state.sqrtPriceX96 != sqrtPriceLimitX96) {
             StepComputations memory step;
 
@@ -576,6 +597,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             );
 
             // ensure that we do not overshoot the min/max tick, as the tick bitmap is not aware of these bounds
+            // 因为bimtmap索引没有检查边界,所以这里需要检查
             if (step.tickNext < TickMath.MIN_TICK) {
                 step.tickNext = TickMath.MIN_TICK;
             } else if (step.tickNext > TickMath.MAX_TICK) {
@@ -583,9 +605,11 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             }
 
             // get the price for the next tick
+            // 根据tick计算sqrtPrice
             step.sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(step.tickNext);
 
             // compute values to swap to the target tick, price limit, or point where input/output amount is exhausted
+            // 要么全部购买目标达成,要么达到了限定价格
             (state.sqrtPriceX96, step.amountIn, step.amountOut, step.feeAmount) = SwapMath.computeSwapStep(
                 state.sqrtPriceX96,
                 (zeroForOne ? step.sqrtPriceNextX96 < sqrtPriceLimitX96 : step.sqrtPriceNextX96 > sqrtPriceLimitX96)
@@ -605,6 +629,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             }
 
             // if the protocol fee is on, calculate how much is owed, decrement feeAmount, and increment protocolFee
+            // 如果需要收取协议费,则减掉手续费部分,加到协议费里
             if (cache.feeProtocol > 0) {
                 uint256 delta = step.feeAmount / cache.feeProtocol;
                 step.feeAmount -= delta;
@@ -612,12 +637,15 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
             }
 
             // update global fee tracker
+            // 全局手续费跟踪
             if (state.liquidity > 0)
                 state.feeGrowthGlobalX128 += FullMath.mulDiv(step.feeAmount, FixedPoint128.Q128, state.liquidity);
 
             // shift tick if we reached the next price
+            // 如果到达下一个开方价,移动
             if (state.sqrtPriceX96 == step.sqrtPriceNextX96) {
                 // if the tick is initialized, run the tick transition
+                // 如果当前tick没有初始化,说明没有可成交的流动性,不用做计算了
                 if (step.initialized) {
                     int128 liquidityNet =
                         ticks.cross(
@@ -642,6 +670,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         }
 
         // update tick and write an oracle entry if the tick change
+        // 只要tick发生了变化,就更新预言机
         if (state.tick != slot0Start.tick) {
             (uint16 observationIndex, uint16 observationCardinality) =
                 observations.write(
@@ -668,6 +697,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
 
         // update fee growth global and, if necessary, protocol fees
         // overflow is acceptable, protocol has to withdraw before it hits type(uint128).max fees
+        // 协议费必须要在到达最大值前提取掉,否则会溢出扔掉
         if (zeroForOne) {
             feeGrowthGlobal0X128 = state.feeGrowthGlobalX128;
             if (state.protocolFee > 0) protocolFees.token0 += state.protocolFee;
@@ -746,6 +776,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     }
 
     /// @inheritdoc IUniswapV3PoolOwnerActions
+    // 协议费设定,不收费或者是1/4--1/10
     function setFeeProtocol(uint8 feeProtocol0, uint8 feeProtocol1) external override lock onlyFactoryOwner {
         require(
             (feeProtocol0 == 0 || (feeProtocol0 >= 4 && feeProtocol0 <= 10)) &&
@@ -757,6 +788,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
     }
 
     /// @inheritdoc IUniswapV3PoolOwnerActions
+    // 协议费提取,管理员可以把费用提取到指定地址
     function collectProtocol(
         address recipient,
         uint128 amount0Requested,
@@ -766,6 +798,7 @@ contract UniswapV3Pool is IUniswapV3Pool, NoDelegateCall {
         amount1 = amount1Requested > protocolFees.token1 ? protocolFees.token1 : amount1Requested;
 
         if (amount0 > 0) {
+            //不要提完,避免调用clear消耗太多gas,留1个最小单位
             if (amount0 == protocolFees.token0) amount0--; // ensure that the slot is not cleared, for gas savings
             protocolFees.token0 -= amount0;
             TransferHelper.safeTransfer(token0, recipient, amount0);

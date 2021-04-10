@@ -149,6 +149,7 @@ library SqrtPriceMath {
     /// @param sqrtRatioBX96 Another sqrt price
     /// @param liquidity The amount of usable liquidity
     /// @param roundUp Whether to round the amount up or down
+    /// 指定是向上取整还是向下取整
     /// @return amount0 Amount of token0 required to cover a position of size liquidity between the two passed prices
     function getAmount0Delta(
         uint160 sqrtRatioAX96,

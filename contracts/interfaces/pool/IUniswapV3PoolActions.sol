@@ -2,6 +2,7 @@
 pragma solidity >=0.5.0;
 
 /// @title Permissionless pool actions
+/// 流动性池对外暴露的接口
 /// @notice Contains pool methods that can be called by anyone
 interface IUniswapV3PoolActions {
     /// @notice Sets the initial price for the pool
@@ -10,13 +11,18 @@ interface IUniswapV3PoolActions {
     function initialize(uint160 sqrtPriceX96) external;
 
     /// @notice Adds liquidity for the given recipient/tickLower/tickUpper position
+    /// 给指定的范围添加流动性
     /// @dev The caller of this method receives a callback in the form of IUniswapV3MintCallback#uniswapV3MintCallback
     /// in which they must pay any token0 or token1 owed for the liquidity. The amount of token0/token1 due depends
     /// on tickLower, tickUpper, the amount of liquidity, and the current price.
     /// @param recipient The address for which the liquidity will be created
-    /// @param tickLower The lower tick of the position in which to add liquidity
+    /// 接收流动性的地址
+    /// @param tickLower The lower tick of the position in whicoh to add liquidity
+    /// 添加流动性的最小tick
     /// @param tickUpper The upper tick of the position in which to add liquidity
+    /// 添加流动性的最大tick
     /// @param amount The amount of liquidity to mint
+    /// 要要铸造的流动性的数量
     /// @param data Any data that should be passed through to the callback
     /// @return amount0 The amount of token0 that was paid to mint the given amount of liquidity. Matches the value in the callback
     /// @return amount1 The amount of token1 that was paid to mint the given amount of liquidity. Matches the value in the callback
@@ -49,13 +55,17 @@ interface IUniswapV3PoolActions {
     ) external returns (uint128 amount0, uint128 amount1);
 
     /// @notice Burn liquidity from the sender and account tokens owed for the liquidity to the position
+    /// 收回流动性
     /// @dev Can be used to trigger a recalculation of fees owed to a position by calling with an amount of 0
     /// @dev Fees must be collected separately via a call to #collect
     /// @param tickLower The lower tick of the position for which to burn liquidity
     /// @param tickUpper The upper tick of the position for which to burn liquidity
     /// @param amount How much liquidity to burn
+    /// 要赎回的流动性的数量
     /// @return amount0 The amount of token0 sent to the recipient
+    /// 可获得的token0的数量
     /// @return amount1 The amount of token1 sent to the recipient
+    /// 可获得的token1的数量
     function burn(
         int24 tickLower,
         int24 tickUpper,
@@ -66,10 +76,14 @@ interface IUniswapV3PoolActions {
     /// @dev The caller of this method receives a callback in the form of IUniswapV3SwapCallback#uniswapV3SwapCallback
     /// @param recipient The address to receive the output of the swap
     /// @param zeroForOne The direction of the swap, true for token0 to token1, false for token1 to token0
+    /// 购买方向,true表示token0买token1,1反过来,zero表示token0,one表示token1
     /// @param amountSpecified The amount of the swap, which implicitly configures the swap as exact input (positive), or exact output (negative)
+    /// 购买数量,大于0表示指定购买量,小于0表示指定获得量
     /// @param sqrtPriceLimitX96 The Q64.96 sqrt price limit. If zero for one, the price cannot be less than this
+    /// 最小数量限制
     /// value after the swap. If one for zero, the price cannot be greater than this value after the swap
     /// @param data Any data to be passed through to the callback
+    /// 回调函数参数
     /// @return amount0 The delta of the balance of token0 of the pool, exact when negative, minimum when positive
     /// @return amount1 The delta of the balance of token1 of the pool, exact when negative, minimum when positive
     function swap(
@@ -96,8 +110,11 @@ interface IUniswapV3PoolActions {
     ) external;
 
     /// @notice Increase the maximum number of price and liquidity observations that this pool will store
+    /// 扩容预言机观察点的最大存储量
     /// @dev This method is no-op if the pool already has an observationCardinalityNext greater than or equal to
+    /// 如果当前值已经大于等于输入值了,就什么都不做
     /// the input observationCardinalityNext.
     /// @param observationCardinalityNext The desired minimum number of observations for the pool to store
+    /// 期望要设置的值
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
 }

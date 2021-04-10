@@ -22,12 +22,17 @@ describe('TickBitmap', () => {
       expect(await tickBitmap.isInitialized(1)).to.eq(false)
     })
     it('is flipped by #flipTick', async () => {
-      await tickBitmap.flipTick(1)
-      expect(await tickBitmap.isInitialized(1)).to.eq(true)
+        let ret = await tickBitmap.isInitialized(1)
+      expect(ret).to.eq(true)
     })
     it('is flipped back by #flipTick', async () => {
+        let pos = (await tickBitmap.position1(1));
       await tickBitmap.flipTick(1)
       await tickBitmap.flipTick(1)
+      console.log('xxxxxxxxxxx',pos.wordPos, pos.bitPos,await tickBitmap.bitmap(pos.wordPos),await tickBitmap.GetMap(pos.wordPos));
+        //再次调用会被重置掉
+      await tickBitmap.flipTick(2)
+      console.log('xxxxxxxxxxx',pos.wordPos, pos.bitPos,await tickBitmap.bitmap(pos.wordPos),await tickBitmap.GetMap(pos.wordPos));
       expect(await tickBitmap.isInitialized(1)).to.eq(false)
     })
     it('is not changed by another flip to a different tick', async () => {
@@ -49,6 +54,7 @@ describe('TickBitmap', () => {
       expect(await tickBitmap.isInitialized(-229)).to.eq(false)
       expect(await tickBitmap.isInitialized(-230 + 256)).to.eq(false)
       expect(await tickBitmap.isInitialized(-230 - 256)).to.eq(false)
+        //被再次调用后取异或相当于清除了
       await tickBitmap.flipTick(-230)
       expect(await tickBitmap.isInitialized(-230)).to.eq(false)
       expect(await tickBitmap.isInitialized(-231)).to.eq(false)
@@ -66,11 +72,13 @@ describe('TickBitmap', () => {
       await tickBitmap.flipTick(-229)
       await tickBitmap.flipTick(-259)
 
+        //3次,写入清除又写入了
       expect(await tickBitmap.isInitialized(-259)).to.eq(true)
       expect(await tickBitmap.isInitialized(-229)).to.eq(false)
     })
 
     it('gas cost of flipping first tick in word to initialized', async () => {
+      console.log('xxxxxxxxxxx:flipping:',(await (await tickBitmap.getGasCostOfFlipTick(1)).wait()).gasUsed);
       await snapshotGasCost(await tickBitmap.getGasCostOfFlipTick(1))
     })
     it('gas cost of flipping second tick in word to initialized', async () => {
